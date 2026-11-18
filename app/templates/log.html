@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}Withdrawal log · Pantry QR{% endblock %}
+{% block body %}
+<h1>Withdrawal log</h1>
+<p class="muted">Every time something is taken out — from a bin page, an item page, or a scan — it lands here.</p>
+
+<h2>Units per day (last 14 active days)</h2>
+<div class="table-wrap">
+  <table>
+    <tr><th>Day</th><th>Units taken</th></tr>
+    {% for d in daily %}
+    <tr><td class="mono small">{{ d.day }}</td><td>{{ d.units }}</td></tr>
+    {% else %}
+    <tr><td colspan="2" class="muted">No withdrawals yet.</td></tr>
+    {% endfor %}
+  </table>
+</div>
+
+<h2>All withdrawals</h2>
+<div class="table-wrap">
+  <table>
+    <tr><th>When</th><th>Item</th><th>Qty</th><th>From bin</th><th>Note</th></tr>
+    {% for w in rows %}
+    <tr>
+      <td class="small">{{ w.withdrawn_at | ts }}</td>
+      <td>{{ w.item_name }}</td>
+      <td>{{ w.quantity }}</td>
+      <td class="mono small">{{ w.container_code or "—" }}</td>
+      <td class="small muted">{{ w.note or "" }}</td>
+    </tr>
+    {% else %}
+    <tr><td colspan="5" class="muted">Nothing recorded yet.</td></tr>
+    {% endfor %}
+  </table>
+</div>
+{% endblock %}

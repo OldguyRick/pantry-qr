@@ -1,0 +1,22 @@
+databases:
+  - name: pantry-db
+    plan: free
+    databaseName: pantry
+    user: pantry
+
+services:
+  - type: web
+    name: pantry-qr
+    runtime: docker
+    plan: free
+    dockerContext: .
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /healthz
+    autoDeploy: true
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: pantry-db
+          property: connectionString
+      - key: SEED_DEMO
+        value: "1"

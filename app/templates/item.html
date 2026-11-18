@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+{% block title %}{{ item.name }} · Pantry QR{% endblock %}
+{% block body %}
+<p class="small"><a href="/">← Pantry</a>{% if item.container_code %} · <a href="/c/{{ item.container_code }}">{{ item.container_name }}</a>{% endif %}</p>
+<div class="split">
+  <div>
+    <h1>{{ item.name }}</h1>
+    <p class="muted">{{ item.description or "No description" }}</p>
+
+    <div class="table-wrap" style="margin:16px 0">
+      <table>
+        <tr><th>Code</th><td class="mono">{{ item.token }}</td></tr>
+        <tr><th>Size</th><td>{{ item.size or "—" }}</td></tr>
+        <tr><th>Added</th><td>{{ item.added_on | day }}</td></tr>
+        <tr><th>Best before</th><td>{% if item.best_before %}{{ item.best_before | day }}{% else %}—{% endif %}</td></tr>
+        <tr><th>Quantity</th><td>{{ item.remaining }} of {{ item.quantity }} left</td></tr>
+        <tr><th>Container</th><td>{% if item.container_code %}<a class="mono" href="/c/{{ item.container_code }}">{{ item.container_code }}</a> · {{ item.container_name }}{% else %}<span class="muted">unassigned</span>{% endif %}</td></tr>
+      </table>
+    </div>
+
+    <h2>Take out</h2>
+    {% if item.in_stock %}
+    <form method="post" action="/i/{{ item.token }}/withdraw" class="stack" style="max-width:420px">
+      <div class="row">
+        <div>
+          <label for="q">Quantity</label>
+          <input class="qty" id="q" type="number" name="quantity" value="1" min="1" max="{{ item.remaining }}">
+        </div>
+        <div style="flex:1">
+          <label for="n">Note</label>
+          <input id="n" name="note" placeholder="Used for dinner">
+        </div>
+      </div>
+      <button type="submit">Record withdrawal</button>
+    </form>
+    {% else %}
+    <p class="tag grey">Nothing left in this item</p>
+    {% endif %}
+
+    <h2>Move to another container</h2>
+    <form method="post" action="/i/{{ item.token }}/move" class="row" style="max-width:420px">
+      <select name="container">
+        <option value="">— unassigned —</option>
+        {% for c in containers %}
+        <option value="{{ c.code }}" {{ "selected" if c.code == item.container_code else "" }}>{{ c.name }} ({{ c.code }})</option>
+        {% endfor %}
+      </select>
+      <button class="ghost" type="submit">Move</button>
+    </form>
+
+    <h2>History</h2>
+    <div class="table-wrap">
+      <table>
+        <tr><th>When</th><th>Qty</th><th>From</th><th>Note</th></tr>
+        {% for w in history %}
+        <tr>
+          <td class="small">{{ w.withdrawn_at | ts }}</td>
+          <td>{{ w.quantity }}</td>
+          <td class="mono small">{{ w.container_code or "—" }}</td>
+          <td class="small muted">{{ w.note or "" }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="4" class="muted">No withdrawals recorded.</td></tr>
+        {% endfor %}
+      </table>
+    </div>
+  </div>
+
+  <aside class="stack">
+    <div class="qrbox">
+      <div class="mono small">{{ item.name }}</div>
+      <div style="margin:10px 0">{{ qr_svg(item_url) | safe }}</div>
+      <p class="hint">Stick this on the item — scanning opens its page from any phone.</p>
+      <a class="small" href="/qr/item/{{ item.token }}.png">Download PNG</a>
+    </div>
+  </aside>
+</div>
+{% endblock %}

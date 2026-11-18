@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block title %}Add item · Pantry QR{% endblock %}
+{% block body %}
+<h1>Add an item</h1>
+<p class="muted">A QR code is generated for the item as soon as you save it.</p>
+
+<form method="post" action="/items" class="stack" style="max-width:560px; margin-top:18px">
+  <div>
+    <label for="name">Name</label>
+    <input id="name" name="name" required placeholder="Rolled oats">
+  </div>
+  <div>
+    <label for="description">Description</label>
+    <input id="description" name="description" placeholder="Organic, resealed bag">
+  </div>
+  <div class="row">
+    <div style="flex:1">
+      <label for="size">Size</label>
+      <input id="size" name="size" placeholder="1 kg">
+    </div>
+    <div>
+      <label for="quantity">Quantity</label>
+      <input class="qty" id="quantity" type="number" name="quantity" value="1" min="1">
+    </div>
+  </div>
+  <div class="row">
+    <div style="flex:1">
+      <label for="added_on">Added</label>
+      <input id="added_on" type="date" name="added_on" value="{{ today }}">
+    </div>
+    <div style="flex:1">
+      <label for="best_before">Best before</label>
+      <input id="best_before" type="date" name="best_before">
+    </div>
+  </div>
+  <div>
+    <label for="container">Container</label>
+    <select id="container" name="container">
+      <option value="">— unassigned —</option>
+      {% for c in containers %}
+      <option value="{{ c.code }}" {{ "selected" if c.code == preset else "" }}>{{ c.name }} ({{ c.code }})</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="row">
+    <button type="submit">Save item + QR</button>
+    <a class="small" href="/">Cancel</a>
+  </div>
+</form>
+{% endblock %}

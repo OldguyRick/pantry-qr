@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}Labels · Pantry QR{% endblock %}
+{% block body %}
+<h1>Printable labels</h1>
+<div class="row no-print" style="margin-bottom:18px">
+  <a class="tag {{ 'grey' if kind == 'items' else '' }}" href="/labels?kind=containers">Container labels</a>
+  <a class="tag {{ 'grey' if kind != 'items' else '' }}" href="/labels?kind=items">Item labels</a>
+  <button class="ghost" onclick="window.print()">Print this sheet</button>
+</div>
+<p class="hint no-print">Each code points at a live page, so a printed label never goes stale — the contents it shows are read from the database at scan time.</p>
+
+<div class="labels">
+  {% for c in cards %}
+  <div class="label">
+    {{ qr_svg(c.url, scale=4, border=1) | safe }}
+    <div class="meta">
+      <b>{{ c.title }}</b>
+      <span>{{ c.line1 }}</span>
+      <span class="mono">{{ c.code }}</span>
+    </div>
+  </div>
+  {% else %}
+  <p class="muted">Nothing to label yet.</p>
+  {% endfor %}
+</div>
+{% endblock %}
