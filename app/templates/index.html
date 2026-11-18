@@ -1,91 +1,123 @@
 {% extends "base.html" %}
+{% block title %}Inventory · Pantry QR{% endblock %}
 {% block body %}
-<h1>Your pantry, scanned</h1>
-<p class="muted">Every bin and every item carries a QR code. Scan a bin to see what is inside, take something out, and the count drops.</p>
-
-<div class="stats">
-  <div class="stat"><b>{{ stats.containers }}</b><span>containers</span></div>
-  <div class="stat"><b>{{ stats.item_types }}</b><span>item types</span></div>
-  <div class="stat"><b>{{ stats.on_hand }}</b><span>units on hand</span></div>
-  <div class="stat"><b>{{ stats.out }}</b><span>used up</span></div>
-</div>
-
-{% if expiring %}
-<h2>Best before today or earlier</h2>
-<div class="table-wrap">
-  <table>
-    <tr><th>Item</th><th>Size</th><th>Best before</th><th>Bin</th><th></th></tr>
-    {% for i in expiring %}
-    <tr>
-      <td><a href="/i/{{ i.token }}">{{ i.name }}</a></td>
-      <td>{{ i.size or "—" }}</td>
-      <td><span class="tag warn">{{ i.best_before | day }}</span></td>
-      <td>{% if i.container_code %}<a class="mono" href="/c/{{ i.container_code }}">{{ i.container_code }}</a>{% else %}—{% endif %}</td>
-      <td class="small muted">{{ i.remaining }} left</td>
-    </tr>
-    {% endfor %}
-  </table>
-</div>
-{% endif %}
-
-<h2>Containers</h2>
-<div class="grid">
-  {% for c in containers %}
-  <div class="card">
-    <div class="card-head">
-      <div>
-        <h3><a href="/c/{{ c.code }}">{{ c.name }}</a></h3>
-        <div class="small muted">{{ c.location or "No location set" }}</div>
-      </div>
-      <span class="tag mono">{{ c.code }}</span>
-    </div>
-    <div class="row small muted">
-      <span>{{ c.stocked }} item type{{ "" if c.stocked == 1 else "s" }}</span>
-      <span>·</span>
-      <span>{{ c.on_hand }} unit{{ "" if c.on_hand == 1 else "s" }}</span>
-    </div>
-    <div class="row">
-      <a class="small" href="/c/{{ c.code }}">Open →</a>
-      <a class="small" href="/items/new?container={{ c.code }}">Add item</a>
-      <a class="small" href="/labels?kind=containers&container={{ c.code }}">Label</a>
-    </div>
+<header class="page-head">
+  <div>
+    <p class="eyebrow">Inventory · {{ today }}</p>
+    <h1>The pantry, at a glance</h1>
   </div>
-  {% else %}
-  <p class="muted">No containers yet — create one on the right.</p>
-  {% endfor %}
-
-  <div class="card">
-    <h3>New container</h3>
-    <form method="post" action="/containers" class="stack">
-      <div>
-        <label for="cname">Name</label>
-        <input id="cname" name="name" placeholder="Freezer basket" required>
-      </div>
-      <div>
-        <label for="cloc">Location</label>
-        <input id="cloc" name="location" placeholder="Freezer, top shelf">
-      </div>
-      <button type="submit">Create bin + QR</button>
-    </form>
-    <p class="hint">A unique code and QR are generated automatically; print it from Labels.</p>
+  <div class="head-actions">
+    <a class="btn btn-ghost" href="/scan">Scan a code</a>
+    <a class="btn btn-primary" href="/items/new">Add an item</a>
   </div>
-</div>
+</header>
 
-<h2>Recent withdrawals</h2>
-<div class="table-wrap">
-  <table>
-    <tr><th>When</th><th>Item</th><th>Qty</th><th>From</th><th>Note</th></tr>
-    {% for w in recent %}
-    <tr>
-      <td class="small">{{ w.withdrawn_at | ts }}</td>
-      <td>{{ w.item_name }}</td>
-      <td>{{ w.quantity }}</td>
-      <td class="mono small">{{ w.container_code or "—" }}</td>
-      <td class="small muted">{{ w.note or "" }}</td>
-    </tr>
+<section class="metrics" aria-label="Totals">
+  <div class="metric">
+    <span class="metric-num">{{ stats.containers }}</span>
+    <span class="metric-label">Bins</span>
+  </div>
+  <div class="metric">
+    <span class="metric-num">{{ stats.item_types }}</span>
+    <span class="metric-label">Item types</span>
+  </div>
+  <div class="metric">
+    <span class="metric-num">{{ stats.on_hand }}</span>
+    <span class="metric-label">Units on hand</span>
+  </div>
+  <div class="metric">
+    <span class="metric-num">{{ stats.out }}</span>
+    <span class="metric-label">Used up</span>
+  </div>
+</section>
+
+<div class="layout">
+  <section>
+    <div class="section-head">
+      <h2>Containers</h2>
+      <span class="count">{{ containers|length }} bin{{ "" if containers|length == 1 else "s" }}</span>
+    </div>
+
+    {% if containers %}
+    <ul class="rows">
+      {% for c in containers %}
+      {% set pct = ((c.stocked / c.item_count) * 100) if c.item_count else 0 %}
+      <li class="row-item">
+        <a class="row-main" href="/c/{{ c.code }}">
+          <span class="row-title">{{ c.name }}</span>
+          <span class="row-sub">
+            {{ c.location or "No location set" }}
+            <span class="code">{{ c.code }}</span>
+          </span>
+        </a>
+        <span class="row-stock">
+          <span class="meter {{ 'empty' if pct == 0 }}" role="img" aria-label="{{ c.stocked }} of {{ c.item_count }} item types in stock">
+            <span style="width: {{ '%.0f' % pct }}%"></span>
+          </span>
+          <span class="row-units">{{ c.on_hand }} unit{{ "" if c.on_hand == 1 else "s" }}</span>
+        </span>
+        <a class="row-go" href="/c/{{ c.code }}">Open</a>
+      </li>
+      {% endfor %}
+    </ul>
     {% else %}
-    <tr><td colspan="5" class="muted">Nothing taken yet. Scan a bin to start tracking.</td></tr>
-    {% endfor %}
-  </table>
+    <div class="empty"><strong>No bins yet</strong>Create one below, then print its label from the Labels tab.</div>
+    {% endif %}
+
+    <form class="form-card" method="post" action="/containers">
+      <h3>New container</h3>
+      <div class="form-grid">
+        <div class="field" style="margin-bottom:0">
+          <label for="cname">Name</label>
+          <input id="cname" name="name" placeholder="Freezer basket" required>
+        </div>
+        <div class="field" style="margin-bottom:0">
+          <label for="cloc">Location</label>
+          <input id="cloc" name="location" placeholder="Freezer, top shelf">
+        </div>
+      </div>
+      <div class="form-actions" style="margin-top:16px">
+        <button class="btn btn-primary" type="submit">Create bin + QR</button>
+        <span class="hint" style="margin:0">A unique code and QR are generated automatically.</span>
+      </div>
+    </form>
+  </section>
+
+  <aside>
+    <section class="panel">
+      <h2>Best before</h2>
+      {% if expiring %}
+      <ul class="alerts">
+        {% for i in expiring %}
+        <li>
+          <a class="alert-name" href="/i/{{ i.token }}">{{ i.name }}</a>
+          <span class="alert-when">{{ i.best_before | day }}</span>
+        </li>
+        {% endfor %}
+      </ul>
+      {% else %}
+      <p class="muted small" style="margin:0">Nothing at or past its best-before date.</p>
+      {% endif %}
+    </section>
+
+    <section class="panel">
+      <h2>Recent withdrawals</h2>
+      {% if recent %}
+      <ol class="timeline">
+        {% for w in recent %}
+        <li>
+          <span class="t-what">{{ w.item_name }} · {{ w.quantity }}</span>
+          <span class="t-meta">
+            {% if w.container_code %}{{ w.container_code }} · {% endif %}{{ w.withdrawn_at | ago }}
+          </span>
+        </li>
+        {% endfor %}
+      </ol>
+      <p class="hint" style="margin-top:14px"><a href="/log">Full log →</a></p>
+      {% else %}
+      <p class="muted small" style="margin:0">Nothing taken yet. Scan a bin to start tracking.</p>
+      {% endif %}
+    </section>
+  </aside>
 </div>
 {% endblock %}

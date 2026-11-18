@@ -34,7 +34,7 @@ def test_healthz(client):
 def test_dashboard_renders(client):
     r = client.get("/")
     assert r.status_code == 200
-    assert "Your pantry, scanned" in r.text
+    assert "The pantry, at a glance" in r.text
 
 
 def test_container_lifecycle_and_withdrawal(client):

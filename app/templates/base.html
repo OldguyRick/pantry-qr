@@ -1,27 +1,45 @@
+{% set path = request.url.path %}
 <!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#f6f3ea">
 <title>{% block title %}Pantry QR{% endblock %}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/static/style.css">
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🥫</text></svg>">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%2316241d'/><path d='M11 9h10v3l-1 1v10a2 2 0 0 1-2 2h-4a2 2 0 0 1-2-2V13l-1-1z' fill='%23f6f3ea'/></svg>">
 </head>
 <body>
 <header class="top">
-  <a class="brand" href="/">🥫 Pantry QR</a>
-  <nav>
-    <a href="/scan">Scan</a>
-    <a href="/labels">Labels</a>
-    <a href="/log">Log</a>
-    <a class="cta" href="/items/new">+ Item</a>
+  <a class="brand" href="/">
+    <span class="brand-mark" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+        <rect x="3.2" y="3.2" width="6.6" height="6.6" rx="1.6"/>
+        <rect x="14.2" y="3.2" width="6.6" height="6.6" rx="1.6"/>
+        <rect x="3.2" y="14.2" width="6.6" height="6.6" rx="1.6"/>
+        <rect x="14.2" y="14.2" width="2.6" height="2.6" rx="0.9"/>
+        <rect x="18.4" y="18.4" width="2.4" height="2.4" rx="0.9"/>
+      </svg>
+    </span>
+    Pantry QR
+  </a>
+  <nav aria-label="Main">
+    <a href="/" {% if path == "/" %}aria-current="page"{% endif %}>Inventory</a>
+    <a href="/scan" {% if path == "/scan" %}aria-current="page"{% endif %}>Scan</a>
+    <a href="/labels" {% if path == "/labels" %}aria-current="page"{% endif %}>Labels</a>
+    <a href="/log" {% if path == "/log" %}aria-current="page"{% endif %}>Log</a>
   </nav>
 </header>
+
 <main>
-  {% if msg %}<p class="flash ok">{{ msg }}</p>{% endif %}
-  {% if err %}<p class="flash bad">{{ err }}</p>{% endif %}
+  {% if msg %}<p class="flash ok" role="status">{{ msg }}</p>{% endif %}
+  {% if err %}<p class="flash bad" role="alert">{{ err }}</p>{% endif %}
   {% block body %}{% endblock %}
 </main>
+
 <footer>
   <span>Pantry QR · FastAPI + Postgres on Render</span>
   <span class="mono">{{ request.url.hostname }}</span>

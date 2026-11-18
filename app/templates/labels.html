@@ -1,14 +1,20 @@
 {% extends "base.html" %}
 {% block title %}Labels · Pantry QR{% endblock %}
 {% block body %}
-<h1>Printable labels</h1>
-<div class="row no-print" style="margin-bottom:18px">
-  <a class="tag {{ 'grey' if kind == 'items' else '' }}" href="/labels?kind=containers">Container labels</a>
-  <a class="tag {{ 'grey' if kind != 'items' else '' }}" href="/labels?kind=items">Item labels</a>
-  <button class="ghost" onclick="window.print()">Print this sheet</button>
-</div>
-<p class="hint no-print">Each code points at a live page, so a printed label never goes stale — the contents it shows are read from the database at scan time.</p>
+<header class="page-head">
+  <div>
+    <p class="eyebrow">Print</p>
+    <h1>{{ "Item labels" if kind == "items" else "Container labels" }}</h1>
+    <p class="sub">{{ cards|length }} label{{ "" if cards|length == 1 else "s" }} · scanning one opens its live page</p>
+  </div>
+  <div class="head-actions no-print">
+    <a class="btn btn-ghost btn-sm" href="/labels?kind=containers" {% if kind != "items" %}aria-current="page"{% endif %}>Containers</a>
+    <a class="btn btn-ghost btn-sm" href="/labels?kind=items" {% if kind == "items" %}aria-current="page"{% endif %}>Items</a>
+    <button class="btn btn-primary btn-sm" onclick="window.print()">Print sheet</button>
+  </div>
+</header>
 
+{% if cards %}
 <div class="labels">
   {% for c in cards %}
   <div class="label">
@@ -16,11 +22,16 @@
     <div class="meta">
       <b>{{ c.title }}</b>
       <span>{{ c.line1 }}</span>
-      <span class="mono">{{ c.code }}</span>
+      <span class="lcode">{{ c.code }}</span>
     </div>
   </div>
-  {% else %}
-  <p class="muted">Nothing to label yet.</p>
   {% endfor %}
 </div>
+{% else %}
+<div class="empty"><strong>Nothing to label yet</strong>Create a bin or add an item first.</div>
+{% endif %}
+
+<p class="hint no-print" style="margin-top:22px">
+  Cut along the dashed edge. The QR only carries a URL, so a printed label always shows current stock.
+</p>
 {% endblock %}

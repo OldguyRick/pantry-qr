@@ -1,16 +1,27 @@
 {% extends "base.html" %}
 {% block title %}Scan · Pantry QR{% endblock %}
 {% block body %}
-<h1>Scan a code</h1>
-<p class="muted">Point the camera at a bin or item label. The page it opens is live, so it always shows the current contents.</p>
+<header class="page-head">
+  <div>
+    <p class="eyebrow">Scanner</p>
+    <h1>Scan a code</h1>
+    <p class="sub">Point the camera at a bin or item label — the page it opens is live.</p>
+  </div>
+</header>
 
-<div id="reader" style="max-width:460px"></div>
-<p class="hint" id="status">Waiting for camera permission…</p>
+<div class="scanner">
+  <div class="scanner-frame">
+    <div id="reader"></div>
+    <span class="corner tl"></span><span class="corner tr"></span>
+    <span class="corner bl"></span><span class="corner br"></span>
+  </div>
+  <p class="hint" id="status">Waiting for camera permission…</p>
+</div>
 
-<h2>No camera handy?</h2>
+<div class="section-head"><h2>No camera handy?</h2></div>
 <form class="row" style="max-width:460px" onsubmit="go(event)">
-  <input id="manual" placeholder="Type a bin code, e.g. BIN-A1">
-  <button type="submit">Open</button>
+  <input id="manual" placeholder="Type a bin code, e.g. BIN-A1" aria-label="Bin code" style="flex:1">
+  <button class="btn btn-primary" type="submit">Open</button>
 </form>
 
 <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
@@ -30,7 +41,16 @@
 
   (function start() {
     const status = document.getElementById('status');
-    if (!window.Html5Qrcode) { status.textContent = 'Scanner library failed to load — use the manual box below.'; return; }
+    const frame = document.querySelector('.scanner-frame');
+    const fail = (msg) => {
+      frame.classList.add('is-hidden');
+      status.textContent = msg;
+      status.classList.add('status-note');
+    };
+    if (!window.Html5Qrcode) {
+      fail('Scanner library failed to load — use the manual box below.');
+      return;
+    }
     const scanner = new Html5Qrcode('reader', { verbose: false });
     let done = false;
     scanner.start(
@@ -39,7 +59,7 @@
       (text) => { if (done) return; done = true; status.textContent = 'Found: ' + text; setTimeout(() => onScan(text), 250); },
       () => {}
     ).then(() => { status.textContent = 'Scanning…'; })
-     .catch((err) => { status.textContent = 'Camera unavailable (' + err + '). Use the manual box below.'; });
+     .catch(() => { fail('No camera permission here — type a code below, or open the app on a phone.'); });
   })();
 </script>
 {% endblock %}

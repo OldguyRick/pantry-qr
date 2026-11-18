@@ -1,81 +1,106 @@
 {% extends "base.html" %}
 {% block title %}{{ item.name }} · Pantry QR{% endblock %}
 {% block body %}
-<p class="small"><a href="/">← Pantry</a>{% if item.container_code %} · <a href="/c/{{ item.container_code }}">{{ item.container_name }}</a>{% endif %}</p>
-<div class="split">
+<p class="small" style="margin:0 0 14px">
+  <a href="/">← Pantry</a>
+  {% if item.container_code %} · <a href="/c/{{ item.container_code }}">{{ item.container_name }}</a>{% endif %}
+</p>
+
+<header class="page-head">
   <div>
+    <p class="eyebrow">Item</p>
     <h1>{{ item.name }}</h1>
-    <p class="muted">{{ item.description or "No description" }}</p>
+    <p class="sub">{{ item.description or "No description" }}</p>
+  </div>
+  <div class="head-actions">
+    {% if item.in_stock %}<span class="tag">{{ item.remaining }} of {{ item.quantity }} left</span>
+    {% else %}<span class="tag grey">Used up</span>{% endif %}
+  </div>
+</header>
 
-    <div class="table-wrap" style="margin:16px 0">
-      <table>
-        <tr><th>Code</th><td class="mono">{{ item.token }}</td></tr>
-        <tr><th>Size</th><td>{{ item.size or "—" }}</td></tr>
-        <tr><th>Added</th><td>{{ item.added_on | day }}</td></tr>
-        <tr><th>Best before</th><td>{% if item.best_before %}{{ item.best_before | day }}{% else %}—{% endif %}</td></tr>
-        <tr><th>Quantity</th><td>{{ item.remaining }} of {{ item.quantity }} left</td></tr>
-        <tr><th>Container</th><td>{% if item.container_code %}<a class="mono" href="/c/{{ item.container_code }}">{{ item.container_code }}</a> · {{ item.container_name }}{% else %}<span class="muted">unassigned</span>{% endif %}</td></tr>
-      </table>
-    </div>
+<div class="split">
+  <section>
+    <table class="spec">
+      <tr><th scope="row">Code</th><td class="mono">{{ item.token }}</td></tr>
+      <tr><th scope="row">Size</th><td>{{ item.size or "—" }}</td></tr>
+      <tr><th scope="row">Added</th><td>{{ item.added_on | day }}</td></tr>
+      <tr><th scope="row">Best before</th><td>{% if item.best_before %}{{ item.best_before | day }}{% else %}—{% endif %}</td></tr>
+      <tr><th scope="row">Quantity</th><td>{{ item.remaining }} of {{ item.quantity }} left</td></tr>
+      <tr>
+        <th scope="row">Container</th>
+        <td>
+          {% if item.container_code %}<a class="mono" href="/c/{{ item.container_code }}">{{ item.container_code }}</a> · {{ item.container_name }}
+          {% else %}<span class="muted">unassigned</span>{% endif %}
+        </td>
+      </tr>
+    </table>
 
-    <h2>Take out</h2>
+    <div class="section-head"><h2>Take out</h2></div>
     {% if item.in_stock %}
-    <form method="post" action="/i/{{ item.token }}/withdraw" class="stack" style="max-width:420px">
-      <div class="row">
-        <div>
+    <form method="post" action="/i/{{ item.token }}/withdraw" class="form-card" style="margin-top:0;max-width:520px">
+      <div class="form-grid">
+        <div class="field" style="margin-bottom:0">
           <label for="q">Quantity</label>
-          <input class="qty" id="q" type="number" name="quantity" value="1" min="1" max="{{ item.remaining }}">
+          <input id="q" type="number" name="quantity" value="1" min="1" max="{{ item.remaining }}">
         </div>
-        <div style="flex:1">
+        <div class="field" style="margin-bottom:0">
           <label for="n">Note</label>
           <input id="n" name="note" placeholder="Used for dinner">
         </div>
       </div>
-      <button type="submit">Record withdrawal</button>
+      <div class="form-actions" style="margin-top:16px">
+        <button class="btn btn-primary" type="submit">Record withdrawal</button>
+      </div>
     </form>
     {% else %}
     <p class="tag grey">Nothing left in this item</p>
     {% endif %}
 
-    <h2>Move to another container</h2>
-    <form method="post" action="/i/{{ item.token }}/move" class="row" style="max-width:420px">
-      <select name="container">
+    <div class="section-head"><h2>Move to another container</h2></div>
+    <form method="post" action="/i/{{ item.token }}/move" class="row" style="max-width:520px">
+      <select name="container" aria-label="Container" style="flex:1;min-width:180px">
         <option value="">— unassigned —</option>
         {% for c in containers %}
         <option value="{{ c.code }}" {{ "selected" if c.code == item.container_code else "" }}>{{ c.name }} ({{ c.code }})</option>
         {% endfor %}
       </select>
-      <button class="ghost" type="submit">Move</button>
+      <button class="btn btn-ghost" type="submit">Move</button>
     </form>
 
-    <h2>History</h2>
+    <div class="section-head">
+      <h2>History</h2>
+      {% if history %}<span class="count">{{ history|length }} withdrawal{{ "" if history|length == 1 else "s" }}</span>{% endif %}
+    </div>
     <div class="table-wrap">
       <table>
-        <tr><th>When</th><th>Qty</th><th>From</th><th>Note</th></tr>
-        {% for w in history %}
-        <tr>
-          <td class="small">{{ w.withdrawn_at | ts }}</td>
-          <td>{{ w.quantity }}</td>
-          <td class="mono small">{{ w.container_code or "—" }}</td>
-          <td class="small muted">{{ w.note or "" }}</td>
-        </tr>
-        {% else %}
-        <tr><td colspan="4" class="muted">No withdrawals recorded.</td></tr>
-        {% endfor %}
+        <thead><tr><th>When</th><th class="num">Qty</th><th>From</th><th>Note</th></tr></thead>
+        <tbody>
+          {% for w in history %}
+          <tr>
+            <td class="small muted">{{ w.withdrawn_at | ts }}</td>
+            <td class="num">{{ w.quantity }}</td>
+            <td><span class="code">{{ w.container_code or "—" }}</span></td>
+            <td class="small muted">{{ w.note or "" }}</td>
+          </tr>
+          {% else %}
+          <tr><td colspan="4" class="muted">No withdrawals recorded.</td></tr>
+          {% endfor %}
+        </tbody>
       </table>
     </div>
-  </div>
+  </section>
 
-  <aside class="stack">
-    <div class="qrbox">
-      <div class="mono small">{{ item.name }}</div>
-      <div style="margin:10px 0">{{ qr_svg(item_url) | safe }}</div>
-      <p class="hint">Stick this on the item — scanning opens its page from any phone.</p>
-      <a class="small" href="/qr/item/{{ item.token }}.png">Download PNG</a>
+  <aside class="side">
+    <div class="qr-card">
+      <div class="qr-name">{{ item.name }}</div>
+      <div class="qr-frame" style="margin-top:12px">{{ qr_svg(item_url) | safe }}</div>
+      <p class="qr-caption">Stick this on the item — scanning opens this page on any phone.</p>
+      <p style="margin:10px 0 0"><a class="small" href="/qr/item/{{ item.token }}.png">Download PNG</a></p>
     </div>
-    <form method="post" action="/i/{{ item.token }}/delete"
+
+    <form method="post" action="/i/{{ item.token }}/delete" class="no-print" style="margin-top:14px"
           onsubmit="return confirm('Delete this item and its withdrawal history?')">
-      <button class="danger" type="submit">Delete this item</button>
+      <button class="btn btn-danger btn-sm" type="submit" style="width:100%">Delete this item</button>
     </form>
   </aside>
 </div>

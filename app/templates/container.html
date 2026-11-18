@@ -1,74 +1,101 @@
 {% extends "base.html" %}
 {% block title %}{{ container.name }} · Pantry QR{% endblock %}
 {% block body %}
-<p class="small"><a href="/">← All containers</a></p>
-<div class="split">
+<p class="small" style="margin:0 0 14px"><a href="/">← All containers</a></p>
+
+<header class="page-head">
   <div>
+    <p class="eyebrow">Container</p>
     <h1>{{ container.name }}</h1>
-    <p class="muted">{{ container.location or "No location set" }} · <span class="mono">{{ container.code }}</span></p>
-
-    <div class="row no-print" style="margin:14px 0 18px">
-      <a class="small" href="/items/new?container={{ container.code }}">+ Add item to this bin</a>
-      <a class="small" href="/labels?kind=items&container={{ container.code }}">Print item labels</a>
-    </div>
-
-    <div class="table-wrap">
-      <table>
-        <tr><th>Item</th><th>Size</th><th>Added</th><th>Best before</th><th>In bin</th><th class="no-print">Take out</th></tr>
-        {% for i in items %}
-        <tr>
-          <td><a href="/i/{{ i.token }}">{{ i.name }}</a>{% if i.description %}<div class="small muted">{{ i.description }}</div>{% endif %}</td>
-          <td class="small">{{ i.size or "—" }}</td>
-          <td class="small">{{ i.added_on | day }}</td>
-          <td class="small">{% if i.best_before %}{{ i.best_before | day }}{% else %}—{% endif %}</td>
-          <td>
-            {% if i.in_stock %}<span class="tag">{{ i.remaining }} / {{ i.quantity }}</span>
-            {% else %}<span class="tag grey">used up</span>{% endif %}
-          </td>
-          <td class="no-print">
-            {% if i.in_stock %}
-            <form method="post" action="/c/{{ container.code }}/withdraw" class="row">
-              <input type="hidden" name="item_id" value="{{ i.id }}">
-              <input class="qty" type="number" name="quantity" value="1" min="1" max="{{ i.remaining }}">
-              <button type="submit">Take</button>
-            </form>
-            {% else %}<span class="small muted">—</span>{% endif %}
-          </td>
-        </tr>
-        {% else %}
-        <tr><td colspan="6" class="muted">This bin is empty. <a href="/items/new?container={{ container.code }}">Add the first item</a>.</td></tr>
-        {% endfor %}
-      </table>
-    </div>
-
-    <h2>Withdrawals from this bin</h2>
-    <div class="table-wrap">
-      <table>
-        <tr><th>When</th><th>Item</th><th>Qty</th><th>Note</th></tr>
-        {% for w in history %}
-        <tr>
-          <td class="small">{{ w.withdrawn_at | ts }}</td>
-          <td>{{ w.item_name }}</td>
-          <td>{{ w.quantity }}</td>
-          <td class="small muted">{{ w.note or "" }}</td>
-        </tr>
-        {% else %}
-        <tr><td colspan="4" class="muted">Nothing taken from this bin yet.</td></tr>
-        {% endfor %}
-      </table>
-    </div>
+    <p class="sub">{{ container.location or "No location set" }} · <span class="code">{{ container.code }}</span></p>
   </div>
+  <div class="head-actions">
+    <a class="btn btn-ghost" href="/items/new?container={{ container.code }}">Add item</a>
+    <a class="btn btn-ghost" href="/labels?kind=items&container={{ container.code }}">Print labels</a>
+  </div>
+</header>
 
-  <aside class="stack">
-    <div class="qrbox">
-      <div class="big-code mono">{{ container.code }}</div>
-      <div style="margin:10px 0">{{ qr_svg(container_url) | safe }}</div>
-      <p class="hint">Scan with a phone camera to open this bin's live contents.</p>
-      <a class="small" href="/qr/bin/{{ container.code }}.png">Download PNG</a>
+<div class="split">
+  <section>
+    <div class="section-head">
+      <h2>Contents</h2>
+      <span class="count">{{ items|length }} item{{ "" if items|length == 1 else "s" }}</span>
     </div>
-    <form method="post" action="/c/{{ container.code }}/delete"
+
+    {% if items %}
+    <ul class="items">
+      {% for i in items %}
+      <li class="item">
+        <div>
+          <a class="item-name" href="/i/{{ i.token }}">{{ i.name }}</a>
+          <p class="item-meta">
+            {% if i.size %}{{ i.size }} · {% endif %}added {{ i.added_on | day }}
+            {% if i.best_before %} · best before {{ i.best_before | day }}{% endif %}
+          </p>
+          {% if i.description %}<p class="item-desc">{{ i.description }}</p>{% endif %}
+        </div>
+
+        <div class="item-stock">
+          {% if i.in_stock %}
+          <span class="tag">{{ i.remaining }} / {{ i.quantity }}</span>
+          {% else %}
+          <span class="tag grey">used up</span>
+          {% endif %}
+        </div>
+
+        {% if i.in_stock %}
+        <form class="take" method="post" action="/c/{{ container.code }}/withdraw">
+          <input type="hidden" name="item_id" value="{{ i.id }}">
+          <label class="visually-hidden" for="q{{ i.id }}">Quantity to take</label>
+          <input id="q{{ i.id }}" type="number" name="quantity" value="1" min="1" max="{{ i.remaining }}" aria-label="Quantity to take">
+          <button type="submit">Take</button>
+        </form>
+        {% else %}
+        <span class="small muted no-print">—</span>
+        {% endif %}
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <div class="empty"><strong>This bin is empty</strong><a href="/items/new?container={{ container.code }}">Add the first item</a>.</div>
+    {% endif %}
+
+    <div class="section-head">
+      <h2>Withdrawals from this bin</h2>
+      {% if history %}<span class="count">{{ history|length }} recorded</span>{% endif %}
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>When</th><th>Item</th><th class="num">Qty</th><th>Note</th></tr>
+        </thead>
+        <tbody>
+          {% for w in history %}
+          <tr>
+            <td class="small muted">{{ w.withdrawn_at | ts }}</td>
+            <td>{{ w.item_name }}</td>
+            <td class="num">{{ w.quantity }}</td>
+            <td class="small muted">{{ w.note or "" }}</td>
+          </tr>
+          {% else %}
+          <tr><td colspan="4" class="muted">Nothing taken from this bin yet.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <aside class="side">
+    <div class="qr-card">
+      <div class="qr-code">{{ container.code }}</div>
+      <div class="qr-frame" style="margin-top:12px">{{ qr_svg(container_url) | safe }}</div>
+      <p class="qr-caption">Scan to open this bin. The page always reads live stock, so the sticker never goes stale.</p>
+      <p style="margin:10px 0 0"><a class="small" href="/qr/bin/{{ container.code }}.png">Download PNG</a></p>
+    </div>
+
+    <form method="post" action="/c/{{ container.code }}/delete" class="no-print" style="margin-top:14px"
           onsubmit="return confirm('Delete this bin? Items inside become unassigned.')">
-      <button class="danger" type="submit">Delete this bin</button>
+      <button class="btn btn-danger btn-sm" type="submit" style="width:100%">Delete this bin</button>
     </form>
   </aside>
 </div>

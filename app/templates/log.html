@@ -1,36 +1,58 @@
 {% extends "base.html" %}
 {% block title %}Withdrawal log · Pantry QR{% endblock %}
 {% block body %}
-<h1>Withdrawal log</h1>
-<p class="muted">Every time something is taken out — from a bin page, an item page, or a scan — it lands here.</p>
+<header class="page-head">
+  <div>
+    <p class="eyebrow">History</p>
+    <h1>Withdrawal log</h1>
+    <p class="sub">Every take-out, from a bin page, an item page, or a scan.</p>
+  </div>
+</header>
 
-<h2>Units per day (last 14 active days)</h2>
-<div class="table-wrap">
-  <table>
-    <tr><th>Day</th><th>Units taken</th></tr>
-    {% for d in daily %}
-    <tr><td class="mono small">{{ d.day }}</td><td>{{ d.units }}</td></tr>
-    {% else %}
-    <tr><td colspan="2" class="muted">No withdrawals yet.</td></tr>
-    {% endfor %}
-  </table>
-</div>
+<div class="layout">
+  <section>
+    <div class="section-head">
+      <h2>All withdrawals</h2>
+      <span class="count">{{ rows|length }}{% if rows|length == 300 %}+{% endif %} shown</span>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>When</th><th>Item</th><th class="num">Qty</th><th>Bin</th><th>Note</th></tr></thead>
+        <tbody>
+          {% for w in rows %}
+          <tr>
+            <td class="small muted">{{ w.withdrawn_at | ts }}</td>
+            <td>{{ w.item_name }}</td>
+            <td class="num">{{ w.quantity }}</td>
+            <td><span class="code">{{ w.container_code or "—" }}</span></td>
+            <td class="small muted">{{ w.note or "" }}</td>
+          </tr>
+          {% else %}
+          <tr><td colspan="5" class="muted">Nothing recorded yet.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
 
-<h2>All withdrawals</h2>
-<div class="table-wrap">
-  <table>
-    <tr><th>When</th><th>Item</th><th>Qty</th><th>From bin</th><th>Note</th></tr>
-    {% for w in rows %}
-    <tr>
-      <td class="small">{{ w.withdrawn_at | ts }}</td>
-      <td>{{ w.item_name }}</td>
-      <td>{{ w.quantity }}</td>
-      <td class="mono small">{{ w.container_code or "—" }}</td>
-      <td class="small muted">{{ w.note or "" }}</td>
-    </tr>
-    {% else %}
-    <tr><td colspan="5" class="muted">Nothing recorded yet.</td></tr>
-    {% endfor %}
-  </table>
+  <aside>
+    <section class="panel">
+      <h2>Units per day</h2>
+      {% if daily %}
+      {% set peak = (daily | map(attribute="units") | map("int") | max) or 1 %}
+      <ul class="bars">
+        {% for d in daily %}
+        <li>
+          <span class="mono small muted">{{ d.day }}</span>
+          <span class="bar-track"><span class="bar-fill" style="width: {{ '%.0f' % ((d.units / peak) * 100) }}%"></span></span>
+          <span class="bar-num">{{ d.units }}</span>
+        </li>
+        {% endfor %}
+      </ul>
+      {% else %}
+      <p class="muted small" style="margin:0">No withdrawals yet.</p>
+      {% endif %}
+    </section>
+  </aside>
 </div>
 {% endblock %}

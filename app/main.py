@@ -6,7 +6,7 @@ import os
 import secrets
 import string
 from contextlib import asynccontextmanager
-from datetime import date
+from datetime import date, datetime, timezone
 
 from fastapi import FastAPI, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
@@ -67,14 +67,50 @@ def fmt_ts(value) -> str:
     return text
 
 
+def fmt_ago(value) -> str:
+    """Human 'x ago' for the activity rail; falls back to an absolute date."""
+    if not value:
+        return "—"
+    if isinstance(value, datetime):
+        parsed = value
+    else:
+        text = str(value).replace("T", " ").strip()
+        parsed = None
+        for fmt in ("%Y-%m-%d %H:%M:%S.%f", "%Y-%m-%d %H:%M:%S", "%Y-%m-%d %H:%M", "%Y-%m-%d"):
+            try:
+                parsed = datetime.strptime(text, fmt)
+                break
+            except ValueError:
+                continue
+        if parsed is None:
+            return fmt_ts(value)
+
+    if parsed.tzinfo is not None:
+        moment = parsed.astimezone(timezone.utc).replace(tzinfo=None)
+    else:
+        moment = parsed  # CURRENT_TIMESTAMP is UTC in both engines
+    secs = int((datetime.now(timezone.utc).replace(tzinfo=None) - moment).total_seconds())
+    if secs < 60:
+        return "just now"
+    if secs < 3600:
+        return f"{secs // 60} min ago"
+    if secs < 86400:
+        return f"{secs // 3600} h ago"
+    if secs < 7 * 86400:
+        return f"{secs // 86400} d ago"
+    return moment.strftime("%d %b %Y")
+
+
 templates.env.filters["day"] = fmt_day
 templates.env.filters["ts"] = fmt_ts
+templates.env.filters["ago"] = fmt_ago
 templates.env.globals["qr_svg"] = qr.svg
 
 
 def page(request: Request, name: str, **ctx) -> HTMLResponse:
     ctx.setdefault("msg", request.query_params.get("msg", ""))
     ctx.setdefault("err", request.query_params.get("err", ""))
+    ctx.setdefault("today", date.today().strftime("%A %d %B"))
     return templates.TemplateResponse(request, name, ctx)
 
 
