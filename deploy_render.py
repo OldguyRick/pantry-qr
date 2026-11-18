@@ -9,7 +9,10 @@ import time
 import httpx
 
 ENV = os.path.join(os.environ["LOCALAPPDATA"], "hermes", ".env")
-KEY = re.search(r"^RENDER_API_KEY=(\S+)$", open(ENV, encoding="utf-8").read(), re.M).group(1)
+_KEY_MATCH = re.search(r"^RENDER_API_KEY=(\S+)$", open(ENV, encoding="utf-8").read(), re.M)
+if _KEY_MATCH is None:
+    raise SystemExit("RENDER_API_KEY not found in the Hermes .env")
+KEY = _KEY_MATCH.group(1)
 OWNER = "tea-dbugqq67bikc739to44g"
 REGION = "oregon"
 STATE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "render_state.json")

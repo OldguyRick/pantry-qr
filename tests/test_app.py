@@ -80,7 +80,9 @@ def test_container_lifecycle_and_withdrawal(client):
     assert "Test lentils" in bin_page.text
 
     # withdraw 2 of 3
-    item_id = re.search(r'name="item_id" value="(\d+)"', bin_page.text).group(1)
+    _m = re.search(r'name="item_id" value="(\d+)"', bin_page.text)
+    assert _m is not None, "no withdraw form in the bin page"
+    item_id = _m.group(1)
     r = client.post(
         f"/c/{code}/withdraw",
         data={"item_id": item_id, "quantity": "2", "note": "dinner"},

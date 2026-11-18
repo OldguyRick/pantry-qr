@@ -49,7 +49,19 @@ pytest -q
 ```
 
 Covers the container lifecycle, item creation, partial withdrawals, over-withdrawal
-clamping, moving items, label rendering and the QR PNG endpoint.
+clamping, moving items, delete semantics, label rendering and the QR PNG endpoint.
+
+## Lint & type-check
+
+`basedpyright` runs against every Python file at **0 errors, 0 warnings** (config in
+`pyrightconfig.json`, `standard` mode with unused imports/variables promoted to errors):
+
+```bash
+pip install -r requirements-dev.txt
+basedpyright
+```
+
+CI-worthy gate: `basedpyright && pytest -q`.
 
 ## Deploy on Render
 

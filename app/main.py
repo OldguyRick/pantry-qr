@@ -19,6 +19,7 @@ from . import db, qr
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
     db.init_db()
+    print(f"[pantry-qr] database backend: {db.backend()}", flush=True)
     if os.environ.get("SEED_DEMO", "1") == "1":
         seed_demo()
     yield

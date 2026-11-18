@@ -9,7 +9,10 @@ import time
 import httpx
 
 ENV = os.path.join(os.environ["LOCALAPPDATA"], "hermes", ".env")
-KEY = re.search(r"^RENDER_API_KEY=(\S+)$", open(ENV, encoding="utf-8").read(), re.M).group(1)
+_KEY_MATCH = re.search(r"^RENDER_API_KEY=(\S+)$", open(ENV, encoding="utf-8").read(), re.M)
+if _KEY_MATCH is None:
+    raise SystemExit("RENDER_API_KEY not found in the Hermes .env")
+KEY = _KEY_MATCH.group(1)
 state = json.load(open("render_state.json", encoding="utf-8"))
 sid = state["service_id"]
 

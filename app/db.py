@@ -9,27 +9,39 @@ from __future__ import annotations
 
 import os
 import sqlite3
-from typing import Any, Iterable
+from collections.abc import Sequence
+from typing import Any, cast
+
+import psycopg
+from psycopg.rows import dict_row
 
 DATABASE_URL = os.environ.get("DATABASE_URL", "").strip()
 IS_PG = DATABASE_URL.startswith(("postgres://", "postgresql://"))
-SQLITE_PATH = os.environ.get("SQLITE_PATH", os.path.join(os.path.dirname(__file__), "..", "data", "pantry.db"))
+SQLITE_PATH = os.environ.get(
+    "SQLITE_PATH", os.path.join(os.path.dirname(__file__), "..", "data", "pantry.db")
+)
 
-if IS_PG:  # pragma: no cover - exercised on Render
-    import psycopg
-    from psycopg.rows import dict_row
-
-
-def _sql(query: str) -> str:
-    return query.replace("?", "%s") if IS_PG else query
+Row = dict[str, Any]
 
 
-def _connect():
-    if IS_PG:  # pragma: no cover
-        url = DATABASE_URL
-        if url.startswith("postgres://"):
-            url = "postgresql://" + url[len("postgres://"):]
-        return psycopg.connect(url, row_factory=dict_row, autocommit=False)
+def backend() -> str:
+    """Which engine is live — logged at startup so deploy logs say it plainly."""
+    return "postgres" if IS_PG else "sqlite"
+
+
+def _pg_dsn() -> str:
+    """psycopg rejects the postgres:// scheme Render hands out verbatim."""
+    if DATABASE_URL.startswith("postgres://"):
+        return "postgresql://" + DATABASE_URL[len("postgres://") :]
+    return DATABASE_URL
+
+
+def _pg_conn() -> psycopg.Connection[Any]:
+    # dict_row is correct at runtime; psycopg's stub types it for TupleRow only.
+    return psycopg.connect(_pg_dsn(), row_factory=cast(Any, dict_row), autocommit=False)
+
+
+def _sqlite_conn() -> sqlite3.Connection:
     path = os.path.abspath(SQLITE_PATH)
     os.makedirs(os.path.dirname(path), exist_ok=True)
     conn = sqlite3.connect(path)
@@ -38,30 +50,45 @@ def _connect():
     return conn
 
 
-def query(sql: str, params: Iterable[Any] = ()) -> list[dict]:
-    conn = _connect()
+def _sql(query: str) -> str:
+    return query.replace("?", "%s") if IS_PG else query
+
+
+def query(sql: str, params: Sequence[Any] = ()) -> list[Row]:
+    if IS_PG:
+        with _pg_conn() as conn:
+            cur = conn.cursor()
+            # psycopg's stub only accepts its LiteralString template type here.
+            cur.execute(cast(Any, _sql(sql)), tuple(params))
+            rows = cast(list[Row], cur.fetchall())
+            cur.close()
+            return rows
+    conn = _sqlite_conn()
     try:
-        cur = conn.cursor()
-        cur.execute(_sql(sql), tuple(params))
-        rows = cur.fetchall()
-        return [dict(r) for r in rows]
+        return [dict(r) for r in conn.execute(_sql(sql), tuple(params)).fetchall()]
     finally:
         conn.close()
 
 
-def execute(sql: str, params: Iterable[Any] = ()) -> dict | None:
+def execute(sql: str, params: Sequence[Any] = ()) -> Row | None:
     """Run a write statement. Returns the first row if the statement RETURNs."""
-    conn = _connect()
+    if IS_PG:
+        with _pg_conn() as conn:
+            cur = conn.cursor()
+            cur.execute(cast(Any, _sql(sql)), tuple(params))
+            row = cast(Row | None, cur.fetchone()) if cur.description is not None else None
+            cur.close()
+            conn.commit()
+            return row
+    conn = _sqlite_conn()
     try:
-        cur = conn.cursor()
-        cur.execute(_sql(sql), tuple(params))
-        row = None
-        if cur.description is not None:
-            row = cur.fetchone()
+        cur = conn.execute(_sql(sql), tuple(params))
+        row = dict(cur.fetchone()) if cur.description is not None else None
         conn.commit()
-        return dict(row) if row else None
+        return row
     finally:
         conn.close()
+
 
 
 SCHEMA_PG = """
@@ -132,16 +159,17 @@ CREATE INDEX IF NOT EXISTS idx_withdrawals_item ON withdrawals(item_id);
 
 
 def init_db() -> None:
-    conn = _connect()
+    if IS_PG:
+        with _pg_conn() as conn:
+            cur = conn.cursor()
+            cur.execute(SCHEMA_PG)
+            cur.close()
+            conn.commit()
+        return
+    conn = _sqlite_conn()
     try:
-        script = SCHEMA_PG if IS_PG else SCHEMA_SQLITE
-        if IS_PG:  # pragma: no cover
-            with conn.cursor() as cur:
-                cur.execute(script)
-            conn.commit()
-        else:
-            conn.executescript(script)
-            conn.commit()
+        conn.executescript(SCHEMA_SQLITE)
+        conn.commit()
     finally:
         conn.close()
 
@@ -157,12 +185,14 @@ LEFT JOIN containers c ON c.id = i.container_id
 """
 
 
-def decorate_items(rows: list[dict]) -> list[dict]:
+def decorate_items(rows: list[Row]) -> list[Row]:
     for r in rows:
         r["remaining"] = max(int(r["quantity"]) - int(r["withdrawn"] or 0), 0)
         r["in_stock"] = r["remaining"] > 0
     return rows
 
 
-def get_items(where: str = "", params: Iterable[Any] = (), order: str = "ORDER BY i.name") -> list[dict]:
+def get_items(
+    where: str = "", params: Sequence[Any] = (), order: str = "ORDER BY i.name"
+) -> list[Row]:
     return decorate_items(query(f"{ITEM_SELECT} {where} {order}", params))

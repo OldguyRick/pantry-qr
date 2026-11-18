@@ -1,0 +1,11 @@
+{
+  "include": ["app", "tests", "deploy_render.py", "set_env.py", "verify_live.py"],
+  "exclude": [".venv", "data"],
+  "pythonVersion": "3.12",
+  "venvPath": ".",
+  "venv": ".venv",
+  "typeCheckingMode": "standard",
+  "reportMissingTypeStubs": false,
+  "reportUnusedImport": "error",
+  "reportUnusedVariable": "error"
+}
