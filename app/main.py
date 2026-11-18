@@ -156,6 +156,17 @@ def container_page(request: Request, code: str):
     )
 
 
+@app.post("/c/{code}/delete")
+def delete_container(code: str):
+    rows = db.query("SELECT id FROM containers WHERE code = ?", [code])
+    if not rows:
+        raise HTTPException(404, "No container with that code")
+    # Items survive as unassigned rather than vanishing with the bin.
+    db.execute("UPDATE items SET container_id = NULL WHERE container_id = ?", [rows[0]["id"]])
+    db.execute("DELETE FROM containers WHERE id = ?", [rows[0]["id"]])
+    return RedirectResponse("/?msg=Container+deleted", status_code=303)
+
+
 @app.post("/c/{code}/withdraw")
 def withdraw_from_container(
     code: str,
@@ -251,6 +262,15 @@ def withdraw_from_item(
     if not items:
         raise HTTPException(404, "No item with that code")
     return _withdraw(items[0]["id"], max(1, quantity), note, redirect_to=f"/i/{token}")
+
+
+@app.post("/i/{token}/delete")
+def delete_item(token: str):
+    items = db.query("SELECT id FROM items WHERE token = ?", [token])
+    if not items:
+        raise HTTPException(404, "No item with that code")
+    db.execute("DELETE FROM items WHERE id = ?", [items[0]["id"]])
+    return RedirectResponse("/?msg=Item+deleted", status_code=303)
 
 
 @app.post("/i/{token}/move")

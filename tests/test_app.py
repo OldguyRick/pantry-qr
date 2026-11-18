@@ -141,6 +141,23 @@ def test_not_found(client):
     assert client.get("/i/nope").status_code == 404
 
 
+def test_delete_bin_keeps_items_and_delete_item(client):
+    r = client.post("/containers", data={"name": "Doomed bin", "location": ""}, follow_redirects=False)
+    code = r.headers["location"].split("/c/")[1].split("?")[0]
+    r = client.post("/items", data={"name": "Orphan oats", "quantity": "1", "container": code}, follow_redirects=False)
+    token = r.headers["location"].split("/i/")[1].split("?")[0]
+
+    assert client.post(f"/c/{code}/delete", follow_redirects=False).status_code == 303
+    assert client.get(f"/c/{code}").status_code == 404
+    # the item survives, just unassigned
+    item_page = client.get(f"/i/{token}")
+    assert item_page.status_code == 200
+    assert "unassigned" in item_page.text
+
+    assert client.post(f"/i/{token}/delete", follow_redirects=False).status_code == 303
+    assert client.get(f"/i/{token}").status_code == 404
+
+
 def test_scan_page(client):
     r = client.get("/scan")
     assert r.status_code == 200

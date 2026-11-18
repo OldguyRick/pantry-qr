@@ -6,3 +6,4 @@ data/
 .pytest_cache/
 .env
 *.db
+render_state.json

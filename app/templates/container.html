@@ -66,6 +66,10 @@
       <p class="hint">Scan with a phone camera to open this bin's live contents.</p>
       <a class="small" href="/qr/bin/{{ container.code }}.png">Download PNG</a>
     </div>
+    <form method="post" action="/c/{{ container.code }}/delete"
+          onsubmit="return confirm('Delete this bin? Items inside become unassigned.')">
+      <button class="danger" type="submit">Delete this bin</button>
+    </form>
   </aside>
 </div>
 {% endblock %}

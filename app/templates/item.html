@@ -73,6 +73,10 @@
       <p class="hint">Stick this on the item — scanning opens its page from any phone.</p>
       <a class="small" href="/qr/item/{{ item.token }}.png">Download PNG</a>
     </div>
+    <form method="post" action="/i/{{ item.token }}/delete"
+          onsubmit="return confirm('Delete this item and its withdrawal history?')">
+      <button class="danger" type="submit">Delete this item</button>
+    </form>
   </aside>
 </div>
 {% endblock %}
